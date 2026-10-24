@@ -6,172 +6,132 @@ import ConnectButton from "@/components/ui/ConnectButton";
 import NetworkBadge from "@/components/botchain/NetworkBadge";
 import BuiltOnBotChain from "@/components/botchain/BuiltOnBotChain";
 import { app } from "@/lib/app-config";
-
-export type NavItem = { href: string; label: string };
+import { DOCK_ITEMS } from "@/lib/nav";
 
 interface PageShellProps {
   children: React.ReactNode;
-  nav?: NavItem[];
   title?: string;
   description?: string;
 }
 
-/**
- * App frame.
- *
- * A top bar rather than ghost-pay's 220px rail. These apps have two or three screens, and a rail
- * that wide spends a fifth of a laptop window — and all of a phone — on three links. The bar is
- * the same at every width, which also means there is no drawer, no focus trap and no hamburger to
- * get wrong.
- *
- * Height is `100dvh` rather than `100vh`. On mobile Safari and Chrome, `100vh` is the viewport
- * with the browser chrome *retracted*, so a `h-screen` layout with `overflow-hidden` pushes its
- * own footer under the address bar and the user cannot scroll to it.
- */
-export default function PageShell({ children, nav = [], title, description }: PageShellProps) {
+export default function PageShell({ children, title, description }: PageShellProps) {
+  const pathname = usePathname();
+
   return (
     <div
-      className="flex flex-col overflow-x-hidden"
-      style={{ minHeight: "100dvh", background: "var(--bg-base)" }}
+      className="min-h-[100dvh] flex flex-col justify-between overflow-x-hidden"
+      style={{ background: "var(--bg-base)" }}
     >
-      <header
-        className="sticky top-0 z-30 flex-shrink-0"
-        style={{
-          borderBottom: "1px solid var(--border-subtle)",
-          background: "var(--bg-surface)",
-        }}
-      >
-        <div className="mx-auto w-full max-w-[880px] px-4 md:px-6">
-          <div className="flex items-center gap-3 py-2.5">
-            <Link href="/" className="flex items-center gap-2 flex-shrink-0 no-underline">
-              <span
-                className="w-2 h-2 flex-shrink-0"
-                style={{ background: "var(--accent)" }}
-                aria-hidden="true"
-              />
-              <span
-                className="text-[14px] font-semibold tracking-[-0.01em]"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {app.name}
-              </span>
-            </Link>
+      {/* Centred Phone-First App Column (max 480px) */}
+      <div className="w-full max-w-[480px] mx-auto min-h-[100dvh] flex flex-col justify-between px-4 pb-28 pt-3 relative">
+        {/* Slim Top Header */}
+        <header className="flex items-center justify-between gap-2 py-2 mb-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 group no-underline text-white font-extrabold text-[20px] tracking-tight"
+          >
+            <span className="text-[22px] group-hover:scale-110 transition-transform inline-block">
+              💧
+            </span>
+            <span>{app.name}</span>
+          </Link>
 
-            <div className="flex-1" />
+          <div className="flex items-center gap-2">
             <NetworkBadge />
-            <div className="w-[150px] md:w-[180px] flex-shrink-0">
+            <div className="w-[140px]">
               <ConnectButton />
             </div>
           </div>
+        </header>
 
-          {nav.length > 0 && <Nav items={nav} />}
-        </div>
-      </header>
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col gap-4">
+          {(title || description) && (
+            <div className="px-1 mb-1">
+              {title && (
+                <h1 className="text-[26px] font-extrabold tracking-tight text-white leading-tight">
+                  {title}
+                </h1>
+              )}
+              {description && (
+                <p className="mt-1 text-[13px] leading-relaxed text-[#C9D5F8]">
+                  {description}
+                </p>
+              )}
+            </div>
+          )}
 
-      <main className="flex-1 mx-auto w-full max-w-[880px] px-4 py-6 md:px-6 md:py-8">
-        {(title || description) && (
-          <div className="mb-6">
-            {title && (
-              <h1
-                className="text-[20px] md:text-[24px] font-semibold tracking-[-0.015em]"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {title}
-              </h1>
-            )}
-            {description && (
-              <p
-                className="mt-1.5 text-[13px] leading-relaxed"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {description}
-              </p>
-            )}
+          {children}
+        </main>
+
+        {/* Ecosystem Footer */}
+        <footer className="mt-8 pt-4 pb-2 border-t border-white/15 text-center flex flex-col items-center gap-2">
+          <div className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-wider text-[#C9D5F8]">
+            <span
+              className="inline-block w-2 h-2 rounded-full"
+              style={{ background: "var(--accent)" }}
+            />
+            <BuiltOnBotChain />
           </div>
-        )}
-        {children}
-      </main>
 
-      {/*
-        The ecosystem footer is required, not decorative. BOT Chain's project assessment criteria
-        ask that the footer or an ecosystem-partnership section carry the BOT Chain name and link
-        to both botchain.ai and the explorer; a site without it is not counted, however complete
-        the product is. It lives in the shared shell so no project can ship missing it.
-      */}
-      <footer
-        className="flex-shrink-0 mx-auto w-full max-w-[880px] px-4 py-6 md:px-6"
-        style={{ borderTop: "1px solid var(--border-subtle)" }}
-      >
-        <div className="flex flex-col gap-3">
-          <p className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-            {app.tagline}
-          </p>
-
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="inline-flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="inline-block w-2 h-2 flex-shrink-0"
-                style={{ background: "var(--accent)", borderRadius: "1px" }}
-              />
-              <BuiltOnBotChain
-                className="text-[11px] uppercase tracking-[0.06em]"
-                style={{ color: "var(--text-secondary)" }}
-              />
-            </span>
-
+          <div className="flex items-center justify-center gap-3 text-[11px] text-[#C9D5F8]/80">
             <a
               href="https://botchain.ai"
               target="_blank"
               rel="noreferrer"
-              className="text-[11px] underline"
-              style={{ color: "var(--text-tertiary)" }}
+              className="underline hover:text-white"
             >
               botchain.ai
             </a>
-
+            <span>·</span>
             <a
               href="https://scan.botchain.ai"
               target="_blank"
               rel="noreferrer"
-              className="text-[11px] underline"
-              style={{ color: "var(--text-tertiary)" }}
+              className="underline hover:text-white"
             >
-              BOT Chain Explorer
+              Explorer
             </a>
           </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+        </footer>
 
-/**
- * Horizontal tabs. `aria-current` rather than colour alone marks the active one, and the active
- * check is an exact match so `/` does not light up on every page.
- */
-function Nav({ items }: { items: NavItem[] }) {
-  const pathname = usePathname();
-
-  return (
-    <nav className="flex items-center gap-1 -mb-px overflow-x-auto">
-      {items.map((item) => {
-        const active = pathname === item.href;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={active ? "page" : undefined}
-            className="nav-link flex items-center px-3 py-2 text-[12px] uppercase tracking-[0.04em] no-underline whitespace-nowrap"
-            style={{
-              color: active ? "var(--accent)" : "var(--text-secondary)",
-              borderBottom: `1px solid ${active ? "var(--accent)" : "transparent"}`,
-            }}
+        {/* Fixed Bottom Dock (Archetype N) */}
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none px-4"
+          style={{
+            paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+          }}
+        >
+          <nav
+            aria-label="Main Navigation Dock"
+            className="dock-pill pointer-events-auto w-full max-w-[440px] bg-white rounded-full p-1.5 flex items-center justify-around border border-[#CBD8F7]/80 shadow-2xl"
           >
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+            {DOCK_ITEMS.map((item) => {
+              const active =
+                item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={[
+                    "dock-link flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full text-[13px] font-bold transition-all duration-150 no-underline select-none min-h-[44px]",
+                    active
+                      ? "bg-[#1946D6] text-white shadow-md"
+                      : "text-[#0B1B4D] hover:bg-[#F4F7FE]",
+                  ].join(" ")}
+                >
+                  {item.icon === "taps" && <span className="text-[14px]">💧</span>}
+                  {item.icon === "new" && <span className="text-[14px]">➕</span>}
+                  {item.icon === "mine" && <span className="text-[14px]">👤</span>}
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+    </div>
   );
 }
