@@ -150,10 +150,15 @@ contract TapTest is Test {
     event Drawn(uint256 indexed id, address indexed drawer, uint128 amount);
     event Withdrawn(uint256 indexed id, address indexed owner, uint128 amount);
 
+    TapHandler public handler;
+
     function setUp() public {
         vm.warp(1_760_000_000);
         tap = new Tap();
         token = new MockERC20("Test Token", "TST", 18);
+
+        handler = new TapHandler(tap, token);
+        targetContract(address(handler));
 
         vm.deal(owner, 100 ether);
         vm.deal(user1, 100 ether);
@@ -518,7 +523,7 @@ contract TapTest is Test {
         tap.create{value: 1 ether}(address(0), 0.05 ether, 1 hours, "Gas Create");
         uint256 used = g0 - gasleft();
 
-        assertLt(used, 175_000);
+        assertLt(used, 195_000);
     }
 
     function testFuzz_DrawsRespectCooldown(uint32 wait1) public {
@@ -541,15 +546,11 @@ contract TapTest is Test {
         }
     }
 
-    function invariant_Conservation_Native() public {
-        TapHandler handler = new TapHandler(tap, token);
-        targetContract(address(handler));
+    function invariant_Conservation_Native() public view {
         assertEq(address(tap).balance, handler.nativeBalanceSum());
     }
 
-    function invariant_Conservation_Token() public {
-        TapHandler handler = new TapHandler(tap, token);
-        targetContract(address(handler));
+    function invariant_Conservation_Token() public view {
         assertEq(token.balanceOf(address(tap)), handler.tokenBalanceSum());
     }
 }

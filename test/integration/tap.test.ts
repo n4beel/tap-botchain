@@ -267,13 +267,12 @@ describe("Tap integration suite", () => {
     const drawer = accounts[1];
 
     // Warp forward 3601 seconds
-    await publicClient.request({
-      method: "evm_increaseTime" as any,
+    await (publicClient.request as any)({
+      method: "evm_increaseTime",
       params: [3601],
     });
-    await publicClient.request({
-      method: "evm_mine" as any,
-      params: [],
+    await (publicClient.request as any)({
+      method: "evm_mine",
     });
 
     const nextAt = await publicClient.readContract({

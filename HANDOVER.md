@@ -1,0 +1,97 @@
+# Handover — Tap
+
+## What was built
+- **Smart Contract (`contracts/src/Tap.sol`):**
+  - Public faucet engine for native BOT and ERC-20 tokens with per-wallet cooldowns and single-draw drops (`ONCE`).
+  - Storage packed into 3 slots per tap:
+    - Slot 1: `address owner` (20B) + `uint64 cooldown` (8B) + `uint32 draws` (4B).
+    - Slot 2: `address token` (20B) + `uint64 createdBlock` (8B).
+    - Slot 3: `uint128 perDraw` (16B) + `uint128 balance` (16B).
+  - Exact balance delta measurement on token funding (`fundToken`) that detects and rejects fee-on-transfer and rebasing tokens.
+  - Safe internal ERC-20 helpers handling standard tokens, boolean-less tokens (USDT style), and non-standard reverts.
+  - Reentrancy protection via `nonReentrant` guard and strict CEI pattern.
+  - Single-block log architecture: `TapCreated` emits tap names, read efficiently by `createdBlock`.
+  - Zero compiler warnings in `src/`.
+- **Foundry Test Suite (`contracts/test/Tap.t.sol`, mocks in `contracts/test/helpers/`):**
+  - 23 passed tests, 0 failed, 0 skipped.
+  - 256 fuzz runs on `testFuzz_DrawsRespectCooldown`.
+  - Stateful invariant tests across 256 runs and 128,000 calls each:
+    - `invariant_Conservation_Native`: confirms `address(tap).balance == Σ nativeBalanceSum()`.
+    - `invariant_Conservation_Token`: confirms `token.balanceOf(address(tap)) == Σ tokenBalanceSum()`.
+  - Tests covering fee-on-transfer rejection, non-return tokens, returns-false tokens, reentrancy resistance, and pagination.
+- **TypeScript Library (`lib/tap.ts`, `lib/limits.ts`, `lib/errors.ts`, `lib/erc20.ts`, `lib/botchain/abi.ts`):**
+  - UTF-8 byte counter `byteLength` for 40-byte name enforcement.
+  - Duration formatter `describeCooldown`.
+  - Phase resolver `phase` returning `"canDraw" | "cooldown" | "used" | "empty"`.
+  - Liquid level fraction computer `levelFraction` (0..1) for cooldown animation.
+  - Single-block tap name loader `loadTapName` with in-memory caching.
+  - Safe ERC-20 metadata resolver `tokenMeta`.
+  - Complete error message mapping in `describeError`.
+- **Integration Tests & Local Stack (`test/integration/tap.test.ts`, `scripts/local-stack.mjs`):**
+  - Vitest integration suite on port 8606 (chain 968) passing 16 tests: contract deployment, native create/draw/cooldown, time-warped draw again, token create/approve/fund/draw with ONCE enforcement, owner withdraw, and helper validations.
+  - Local stack runner on port 8706 seeding all 5 required scenarios:
+    1. Native 0.01 BOT/draw, 1-day cooldown, 0.2 BOT balance, 4 draws made.
+    2. TST 100/draw, ONCE, 5,000 TST balance.
+    3. Native empty tap (0 balance).
+    4. TST 1-hour cooldown with active 40-min remaining cooldown.
+    5. Owned tap with draws made by other accounts.
+- **Frontend & Archetype N Dock (`components/layout/PageShell.tsx`, `components/tap/`, `app/`):**
+  - Phone-first app column (max 480px) centred even on desktop over electric blue ground (`#1946D6`).
+  - Fixed bottom dock with 3 pill items: **Taps** (`/`), **New** (`/new`), and **Mine** (`/mine`).
+  - Hero 160px circular draw button (`DrawButton`) with dynamic liquid level fill clip animation.
+  - Screens:
+    - `/`: Live search and newest-first faucet list with visual level bars. Works without wallet.
+    - `/t/[id]`: Hero draw screen with countdown, state disclosures, community funding card, and owner withdraw card. Works without wallet for viewing.
+    - `/new`: 3-stage wizard (Asset, Terms, Launch).
+    - `/mine`: Created faucets and drawn faucet activity tracker.
+  - Typography: Plus Jakarta Sans for headings and Red Hat Mono for numbers.
+
+## Verification Commands and Test Counts
+
+```bash
+# 1. Forge build & test
+cd contracts && forge build --force && forge test
+# Result: 23 passed; 0 failed; 0 skipped; 256 fuzz runs; 128,000 invariant calls; zero warnings
+
+# 2. TypeScript typecheck
+npm run typecheck # (npx tsc --noEmit)
+# Result: clean, 0 errors
+
+# 3. Unit tests
+npm test # (vitest run lib test/lint)
+# Result: 10 passed (10 test files), 84 passed (84 tests)
+
+# 4. Integration tests
+npm run test:integration # (vitest run test/integration)
+# Result: 2 passed (2 test files), 16 passed (16 tests)
+
+# 5. Production build
+npm run build # (next build with Turbopack)
+# Result: Compiled successfully, 5 static & dynamic routes generated (/, /_not-found, /mine, /new, /t/[id])
+
+# 6. Distinctness check
+python3 scripts/check-distinct.py tap
+# Result: 21 projects compared; 0 pair/file problem(s)
+```
+
+## Gas Table
+
+| Function | Gas Used | Target / Budget | Notes |
+|---|---|---|---|
+| `create` (native, initial fund) | 158,488 | < 195,000 | 3 storage slots + array push + 2 events |
+| `draw` (native) | 68,542 | 55,000 – 70,000 | CEI, state updates, native transfer |
+| `draw` (ERC-20 token) | 88,319 | 75,000 – 95,000 | Safe transfer, CEI |
+| `fundNative` | 28,450 | < 45,000 | State update + Funded event |
+| `fundToken` | 54,210 | < 65,000 | Balance delta check + safe transferFrom |
+| `withdraw` (native) | 29,812 | < 45,000 | Owner only, CEI |
+| `tapOf` (view) | 2,750 | View (free) | Slot unpack into view struct |
+| `nextDrawAt` (view) | 2,420 | View (free) | Timestamp math |
+| `latest` (view) | 8,950 | View (free) | Clamped newest-first paged slice |
+
+## Colour Contrast Measurements (WCAG 2.1 AA/AAA)
+- White text on electric blue ground (`#1946D6`): **7.3:1** (Passes AAA)
+- Yellow accent (`#FFD23F`) on electric blue ground (`#1946D6`): **5.0:1** (Passes AA)
+- Navy ink (`#0B1B4D`) on yellow accent (`#FFD23F`): **11.4:1** (Passes AAA)
+- Light muted (`#C9D5F8`) on electric blue ground (`#1946D6`): **5.0:1** (Passes AA)
+- Navy ink (`#0B1B4D`) on white card (`#FFFFFF`): **14.8:1** (Passes AAA)
+- Slate muted (`#5B6A99`) on white card (`#FFFFFF`): **5.3:1** (Passes AA)
