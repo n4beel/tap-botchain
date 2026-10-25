@@ -53,6 +53,7 @@ spawn("anvil", [
   "--chain-id", String(CHAIN_ID),
   "--accounts", "10",
   "--timestamp", String(startTimestamp),
+  "--block-time", "1",
   "--silent",
 ], {
   detached: true,
@@ -327,3 +328,4 @@ Seeded Taps:
   - Tap 5: "Account 0 Sovereign Tap" (0.02 BOT / 1-hour cooldown, owned by Acc 0)
 =====================================================
 `);
+process.exit(0);

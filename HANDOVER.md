@@ -131,3 +131,16 @@ All findings from `docs/specs/FEEDBACK-tap.md` addressed in order inside `tap-bo
 - **Console Errors:** 0
 - **Hydration Warnings:** 0
 
+## Feedback round 2
+
+1. **Local-stack autonomous mining (`--block-time 1`):**
+   - Configured `anvil` in `scripts/local-stack.mjs` with `--block-time 1` to produce blocks autonomously on a 1-second cadence.
+   - Seeded states across all 5 scenarios (native 0.01 BOT/draw with 4 draws made, TST ONCE with 5k balance, native empty, TST cooldown running 20m ago, owned tap with draws by others) verified.
+   - Final chain timestamp matches wall clock (`diff: 0s`, within 120s limit).
+   - Confirmed autonomous block progression without manual mining:
+     ```bash
+     b1=$(cast block-number --rpc-url http://127.0.0.1:8706); sleep 3; b2=$(cast block-number --rpc-url http://127.0.0.1:8706); echo "$b1 -> $b2"
+     # Output: 95 -> 98
+     ```
+
+
