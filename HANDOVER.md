@@ -95,3 +95,39 @@ python3 scripts/check-distinct.py tap
 - Light muted (`#C9D5F8`) on electric blue ground (`#1946D6`): **5.0:1** (Passes AA)
 - Navy ink (`#0B1B4D`) on white card (`#FFFFFF`): **14.8:1** (Passes AAA)
 - Slate muted (`#5B6A99`) on white card (`#FFFFFF`): **5.3:1** (Passes AA)
+
+## Feedback round 1
+
+All findings from `docs/specs/FEEDBACK-tap.md` addressed in order inside `tap-botchain/`:
+
+### Item 1: Local stack environment variables and wall-clock timestamp
+- **Status:** FIXED
+- **Details:**
+  - `scripts/local-stack.mjs` updated to configure `.env.local` pointing directly at the local Anvil stack (`NEXT_PUBLIC_BOTCHAIN_NETWORK=testnet`, `NEXT_PUBLIC_BOHR_RPC=http://127.0.0.1:8706`, `NEXT_PUBLIC_CHAIN_ID=968`, `NEXT_PUBLIC_RPC_URL_968`, `NEXT_PUBLIC_CONTRACT_968`, `NEXT_PUBLIC_DEPLOY_BLOCK_968`).
+  - Anvil spawned with `--timestamp (realNow - 1200)` and warped forward only. Final chain timestamp verified within ~2 minutes of wall clock (`diff: 0s` asserted and printed).
+  - Clean port termination (`8706`) and Account Role Table printed on startup.
+
+### Item 2: Browser walkthrough
+- **Status:** FIXED
+- **Details:**
+  - Automated walkthrough executed using headless Chrome and `docs/specs/tools/mock-wallet.js`.
+  - All routes from `06-tap.md` §3.2 verified across roles from the Account Role Table.
+  - Zero console errors, zero hydration warnings.
+
+#### Browser Walkthrough Results
+
+| Route | Role | Action / State Verified | Status | Notes |
+|---|---|---|---|---|
+| `/` | Observer (No wallet) | View tap registry feed & search | PASS | Rendered 5 seeded faucets in phone-first Dock archetype; search bar ready |
+| `/t/1` | Observer (No wallet) | View tap details without wallet | PASS | Rendered hero DRAW button and prompt to connect wallet |
+| `/t/1` | Acc 5 (Drawer) | Draw from tap (`draw`) | PASS | Successfully executed `draw()` for 0.01 BOT; transitioned to cooldown |
+| `/t/4` | Acc 0 (Drawer on cooldown) | Verify cooldown countdown & liquid fill | PASS | Cooldown timer rendered correctly (seeded 20m ago with 40m left) |
+| `/t/2` | Acc 1 (Drawer) | Draw from ONCE tap & verify terminal state | PASS | Drew 100 TST; status transitioned to permanent single-draw used state |
+| `/t/3` | Acc 0 (Funder) | Top up dry tap (`fundNative`) | PASS | Identified dry tap state and executed `fundNative()` top-up of 0.1 BOT |
+| `/t/5` | Acc 0 (Owner) | Withdraw from owned tap (`withdraw`) | PASS | Owner control panel displayed; executed `withdraw()` successfully |
+| `/new` | Acc 0 (Creator) | Create new faucet via wizard (`create`) | PASS | Walked through 3-step wizard and confirmed `create()` on-chain (`🎉 Tap #6 is Live!`) |
+| `/mine` | Acc 0 (User) | View personal faucet portfolio on mobile (360px) | PASS | Rendered owned taps and drawn taps history within mobile dock archetype |
+
+- **Console Errors:** 0
+- **Hydration Warnings:** 0
+

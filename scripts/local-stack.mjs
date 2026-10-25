@@ -13,7 +13,7 @@
  *   node scripts/local-stack.mjs
  */
 
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import {
   createPublicClient,
@@ -39,8 +39,22 @@ const local = defineChain({
   rpcUrls: { default: { http: [RPC] } },
 });
 
-console.log(`Starting anvil on port ${PORT}...`);
-spawn("anvil", ["--port", String(PORT), "--chain-id", String(CHAIN_ID), "--accounts", "10", "--silent"], {
+try {
+  execSync(`fuser -k ${PORT}/tcp 2>/dev/null || true`);
+} catch {}
+
+const TOTAL_WARP = 1200; // 20 minutes in seconds (Scenario 4 drew 20m ago)
+const realNow = Math.floor(Date.now() / 1000);
+const startTimestamp = realNow - TOTAL_WARP;
+
+console.log(`Starting anvil on port ${PORT} with start timestamp ${startTimestamp}...`);
+spawn("anvil", [
+  "--port", String(PORT),
+  "--chain-id", String(CHAIN_ID),
+  "--accounts", "10",
+  "--timestamp", String(startTimestamp),
+  "--silent",
+], {
   detached: true,
   stdio: "ignore",
 }).unref();
@@ -266,16 +280,50 @@ const draw5b = await wallets[3].writeContract({
 });
 await pub.waitForTransactionReceipt({ hash: draw5b });
 
+// Assert final chain timestamp is within 120s of wall clock
+const finalBlock = await pub.getBlock();
+const currentWallTime = Math.floor(Date.now() / 1000);
+const diff = Math.abs(Number(finalBlock.timestamp) - currentWallTime);
+console.log(`\nFinal chain timestamp: ${finalBlock.timestamp} (real: ${currentWallTime}, diff: ${diff}s)`);
+if (diff > 120) {
+  throw new Error(`Chain timestamp skewed by ${diff}s, expected <= 120s`);
+}
+
+// Write .env.local
 console.log("Writing .env.local...");
 const envContent = [
+  "# Written by scripts/local-stack.mjs for Tap",
+  "NEXT_PUBLIC_BOTCHAIN_NETWORK=testnet",
+  `NEXT_PUBLIC_BOHR_RPC=${RPC}`,
   `NEXT_PUBLIC_CHAIN_ID=${CHAIN_ID}`,
-  `NEXT_PUBLIC_RPC_URL=${RPC}`,
+  `NEXT_PUBLIC_RPC_URL_968=${RPC}`,
   `NEXT_PUBLIC_CONTRACT_968=${tapAddress}`,
-  `NEXT_PUBLIC_DEPLOY_BLOCK_968=${deployBlock}`,
+  `NEXT_PUBLIC_DEPLOY_BLOCK_968=${deployBlock > 1n ? deployBlock - 1n : 1n}`,
   `NEXT_PUBLIC_MOCK_TOKEN_968=${tokenAddress}`,
 ].join("\n");
 writeFileSync(".env.local", envContent + "\n");
 
-console.log("✓ Tap local stack seeded successfully.");
-console.log(`Tap contract: ${tapAddress}`);
-console.log(`Mock token: ${tokenAddress}`);
+console.log(`
+=====================================================
+Tap local stack ready on ${RPC}
+=====================================================
+Tap contract:  ${tapAddress}
+Mock token:    ${tokenAddress}
+
+Account Role Table:
+-----------------------------------------------------
+Acc 0: ${accounts[0].address} (Owner of Taps 1, 2, 5; drew from Tap 4 20m ago; can withdraw from Tap 5)
+Acc 1: ${accounts[1].address} (Owner of Taps 3, 4; drew from Tap 1)
+Acc 2: ${accounts[2].address} (Drew from Taps 1, 5; can draw from Tap 2 ONCE)
+Acc 3: ${accounts[3].address} (Drew from Taps 1, 5)
+Acc 4: ${accounts[4].address} (Drew from Tap 1)
+Acc 5: ${accounts[5].address} (Clean drawer - never drawn from any tap)
+-----------------------------------------------------
+Seeded Taps:
+  - Tap 1: "BOT Daily Faucet" (0.01 BOT / 1-day cooldown, 0.2 BOT left, 4 draws)
+  - Tap 2: "Welcome TST Drop" (100 TST / ONCE, 5,000 TST left)
+  - Tap 3: "Exhausted Spring" (0.05 BOT / 1-hour cooldown, 0 BOT left / empty)
+  - Tap 4: "Hourly TST Tap" (50 TST / 1-hour cooldown, Acc 0 drew 20m ago)
+  - Tap 5: "Account 0 Sovereign Tap" (0.02 BOT / 1-hour cooldown, owned by Acc 0)
+=====================================================
+`);
