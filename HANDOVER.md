@@ -160,3 +160,31 @@ All findings from `docs/specs/FEEDBACK-tap.md` addressed in order inside `tap-bo
   - `/` (Home): Verified all three links present (`https://scan.bohr.life/address/0x5fbdb2315678afecb367f032d93f642f64180aa3`, `https://botchain.ai`, `https://scan.botchain.ai`).
   - `/t/1` (Detail): Verified all three links present.
   - `/nonexistent` (Not Found): Verified all three links present.
+
+## Feedback round 4
+
+1. **Shared CSS tokens and wallet menu readability:**
+   - Defined missing shared tokens in `app/globals.css`:
+     - `--text-secondary: #0B1B4D`
+     - `--text-tertiary: #5B6A99`
+     - Updated `--success: #0C7A43`, `--warning: #A86000`, `--danger: #C62828` to maintain ≥ 4.5:1 contrast against `--bg-elevated: #F4F7FE`.
+   - Contrast measurements against `--bg-elevated` (`#F4F7FE`):
+     - `--text-secondary` (`#0B1B4D`): **13.5:1** (Passes AAA)
+     - `--text-tertiary` (`#5B6A99`): **4.88:1** (Passes AA)
+     - `--success` (`#0C7A43`): **4.76:1** (Passes AA)
+     - `--warning` (`#A86000`): **4.95:1** (Passes AA)
+     - `--danger` (`#C62828`): **6.18:1** (Passes AA)
+   - Menu readability in `ConnectButton.tsx`:
+     - Menu surface uses `--bg-elevated` (`#F4F7FE`) with dark navy items (`--text-secondary: #0B1B4D`), muted balance (`--text-tertiary: #5B6A99`), and explicit hover/focus highlight (`data-[highlighted]:bg-[var(--border-subtle)] hover:bg-[var(--border-subtle)]`).
+   - Added unit test `test/lint/tokens.test.ts` verifying all `var(--x)` without fallback in `app/` and `components/` are defined in `globals.css` or next/font.
+   - `python3 scripts/check-tokens.py tap` exits 0.
+
+2. **One-flow Create + Fund Wizard:**
+   - Added optional initial funding field to Stage 3 of `/new` for both native BOT and ERC-20 tokens (default empty = create unfunded).
+   - Created pure step planner `planTapFundingSteps` in `lib/tap-funding.ts` with unit tests covering native vs token, with and without allowance.
+   - Automated sequential transaction flow with visible stepper:
+     - For native BOT: single transaction `create(...)` with `msg.value`.
+     - For ERC-20 tokens: sequential prompt execution `approve(amount)` → `create(...)` → `fundToken(id, amount)`. Skips approve if allowance suffices.
+     - Interruption handling: persists pending fund state to `localStorage`. Resuming on `/new` or `/t/<id>` detects unfunded tap and provides a "Finish Funding" banner.
+     - Per-step failure reporting with a "Retry Failed Step" button preserving created tap ID.
+

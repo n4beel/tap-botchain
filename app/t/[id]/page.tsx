@@ -34,6 +34,7 @@ import {
   type TapView,
 } from "@/lib/tap";
 import { ONCE } from "@/lib/limits";
+import { getPendingFunding, clearPendingFunding, type PendingFunding } from "@/lib/tap-funding";
 
 interface PageParams {
   params: Promise<{ id: string }>;
@@ -62,6 +63,11 @@ export default function TapDetailPage({ params }: PageParams) {
     decimals: 18,
   });
   const [nowSec, setNowSec] = useState<number>(Math.floor(Date.now() / 1000));
+  const [pendingFunding, setPendingFunding] = useState<PendingFunding | null>(null);
+
+  useEffect(() => {
+    setPendingFunding(getPendingFunding(id.toString()));
+  }, [id]);
 
   // Read Tap details
   const {
@@ -183,6 +189,7 @@ export default function TapDetailPage({ params }: PageParams) {
 
   const isDry = tap ? tap.balance < tap.perDraw : true;
   const drawsRemaining = tap ? drawsLeft(tap.balance, tap.perDraw) : 0n;
+  const isOwner = Boolean(address && tap && tap.owner.toLowerCase() === address.toLowerCase());
 
   return (
     <PageShell>
@@ -219,6 +226,27 @@ export default function TapDetailPage({ params }: PageParams) {
         </Panel>
       ) : (
         <div className="flex flex-col gap-4">
+          {/* Finish funding banner if unfunded and connected as owner */}
+          {isOwner && tap.balance === 0n && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-[13px] text-amber-900 flex flex-col gap-2">
+              <div className="flex items-center gap-2 font-bold">
+                <span>⚠️</span>
+                <span>Finish Faucet Funding</span>
+              </div>
+              <p>
+                This faucet was created with zero balance.
+                {pendingFunding?.amountStr
+                  ? ` Complete initial funding with ${pendingFunding.amountStr} ${tokenInfo.symbol} below to activate it.`
+                  : " Add initial funds below so users can start drawing."}
+              </p>
+              <a href="#fund-card" className="no-underline w-fit">
+                <Button size="sm" variant="primary">
+                  Go to Top Up Below ↓
+                </Button>
+              </a>
+            </div>
+          )}
+
           {/* Hero Draw Card */}
           <Panel className="flex flex-col items-center text-center py-8 px-4">
             <span className="text-[12px] font-extrabold uppercase tracking-widest text-[#5B6A99] mb-1">
@@ -316,13 +344,19 @@ export default function TapDetailPage({ params }: PageParams) {
           </Panel>
 
           {/* Top up / Refill card */}
-          <FundCard
-            tap={tap}
-            contractAddress={contractAddress}
-            symbol={tokenInfo.symbol}
-            decimals={tokenInfo.decimals}
-            onFunded={refetchAll}
-          />
+          <div id="fund-card">
+            <FundCard
+              tap={tap}
+              contractAddress={contractAddress}
+              symbol={tokenInfo.symbol}
+              decimals={tokenInfo.decimals}
+              onFunded={() => {
+                clearPendingFunding(id.toString());
+                setPendingFunding(null);
+                refetchAll();
+              }}
+            />
+          </div>
 
           {/* Owner Withdraw Card (if connected as owner) */}
           <WithdrawCard

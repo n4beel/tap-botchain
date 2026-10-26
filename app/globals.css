@@ -31,13 +31,15 @@
   --border-default: #CBD8F7;
   --border-strong: #9CB7F5;
   --text-primary: #FFFFFF;
+  --text-secondary: #0B1B4D;
+  --text-tertiary: #5B6A99;
   --text-on-card: #0B1B4D;
   --text-muted: #C9D5F8;
   --text-muted-card: #5B6A99;
   --accent: #FFD23F;
   --accent-ink: #0B1B4D;
-  --success: #0F9D58;
-  --warning: #F5A623;
+  --success: #0C7A43;
+  --warning: #A86000;
   --danger: #C62828;
 }
 
