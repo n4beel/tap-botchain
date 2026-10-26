@@ -144,3 +144,19 @@ All findings from `docs/specs/FEEDBACK-tap.md` addressed in order inside `tap-bo
      ```
 
 
+
+
+## Feedback round 3
+
+- **Footer Three-Link Compliance & Helper:**
+  - Added fixed constants `BOTCHAIN_SITE_URL = "https://botchain.ai"` and `BOTCHAIN_EXPLORER_URL = "https://scan.botchain.ai"` in `lib/botchain/chain.ts`.
+  - Added exported `footerLinks(chainId?: number): FooterLinks` returning `{ contract, site, explorer }` where `contract` is `<explorer for that chain>/address/<address>` (or `null` when undeployed).
+  - Updated `BuiltOnBotChain` to use `footerLinks(activeBotChain.id).contract`.
+  - Updated `components/layout/PageShell.tsx` footer to consume `site` and `explorer` from `footerLinks()`.
+  - Added `app/not-found.tsx` wrapped in `PageShell` ensuring footer renders on 404 and unrouted states.
+  - Added unit test suite in `lib/botchain/__tests__/chain.test.ts` covering chain IDs 677 and 968 for both deployed and undeployed configurations.
+
+- **Browser-Check with Local Stack (port 8706 / 3006):**
+  - `/` (Home): Verified all three links present (`https://scan.bohr.life/address/0x5fbdb2315678afecb367f032d93f642f64180aa3`, `https://botchain.ai`, `https://scan.botchain.ai`).
+  - `/t/1` (Detail): Verified all three links present.
+  - `/nonexistent` (Not Found): Verified all three links present.

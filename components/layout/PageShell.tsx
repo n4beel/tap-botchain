@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import ConnectButton from "@/components/ui/ConnectButton";
 import NetworkBadge from "@/components/botchain/NetworkBadge";
 import BuiltOnBotChain from "@/components/botchain/BuiltOnBotChain";
+import { footerLinks } from "@/lib/botchain/chain";
 import { app } from "@/lib/app-config";
 import { DOCK_ITEMS } from "@/lib/nav";
 
@@ -16,6 +17,7 @@ interface PageShellProps {
 
 export default function PageShell({ children, title, description }: PageShellProps) {
   const pathname = usePathname();
+  const { site, explorer } = footerLinks();
 
   return (
     <div
@@ -76,7 +78,7 @@ export default function PageShell({ children, title, description }: PageShellPro
 
           <div className="flex items-center justify-center gap-3 text-[11px] text-[#C9D5F8]/80">
             <a
-              href="https://botchain.ai"
+              href={site}
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-white"
@@ -85,7 +87,7 @@ export default function PageShell({ children, title, description }: PageShellPro
             </a>
             <span>·</span>
             <a
-              href="https://scan.botchain.ai"
+              href={explorer}
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-white"
